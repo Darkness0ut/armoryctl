@@ -18,6 +18,8 @@ import (
 	"bytes"
 	"fmt"
 	"time"
+	"encoding/hex"
+	"log"
 
 	"github.com/f-secure-foundry/armoryctl/internal"
 )
@@ -50,6 +52,26 @@ const ResponseMinLen = 4
 var Cmd = map[string]byte{
 	"Read":     0x02,
 	"SelfTest": 0x77,
+	"SHA256":	0x47,
+}
+
+var ShaMode = map[string]byte{
+	"SHA_MODE_SHA256_START": 	0,
+	"SHA_MODE_SHA256_UPDATE": 	1,
+	"SHA_MODE_SHA256_END": 		2,
+	"SHA_MODE_SHA256_PUBLIC": 	3,
+	"SHA_MODE_HMAC_START": 		4,
+	"SHA_MODE_HMAC_UPDATE": 	1,
+	"SHA_MODE_HMAC_END": 		5,
+	"SHA_MODE_READ_CONTEXT": 	6,
+	"SHA_MODE_WRITE_CONTEXT":   7,
+	"SHA_MODE_TARGET_MASK": 	0xC0,
+    "SHA_MODE_TARGET_TEMPKEY":  0x00,
+    "SHA_MODE_TARGET_MSGDIGBUF":0x40,
+    "SHA_MODE_TARGET_OUT_ONLY": 0xC0,
+    // "SHA_RSP_SIZE": 			35,
+    // "SHA_RSP_SIZE_SHORT":      	4,
+    // "SHA_RSP_SIZE_LONG":      	35,
 }
 
 // Device status/error codes.
@@ -149,7 +171,8 @@ func Wake() (err error) {
 	//
 	// Writing 0x00 triggers the chip wake-up
 	// (p47, 7.1 I/O Conditions, ATECC608A Full Datasheet).
-	_ = armoryctl.I2CWrite(I2CBus, I2CAddress, 0x00, []byte{0x00})
+	_ = armoryctl.I2CWrite(I2CBus, 0, 0x01, []byte{0x00})
+	log.Printf("[ATSEND Wakeup  addr:%03d %d]\n", 0, 1)
 
 	time.Sleep(CmdMaxExecutionTime * time.Millisecond)
 
@@ -174,6 +197,13 @@ func Wake() (err error) {
 // command sequence.
 func Sleep() {
 	_ = armoryctl.I2CWrite(I2CBus, I2CAddress, 0x01, nil)
+	log.Printf("[ATSEND  Sleep  addr:%03d %d]\n", I2CAddress, 1)
+}
+
+// Idle put the device in idle mode at each command sequence
+func Idle() {
+	_ = armoryctl.I2CWrite(I2CBus, I2CAddress, 0x02, nil)
+	log.Printf("[ATSEND  Idle   addr:%03d %d]\n", I2CAddress, 2)
 }
 
 // ExecuteCmd issues an ATECC command conforming to:
@@ -189,7 +219,8 @@ func ExecuteCmd(opcode byte, param1 [1]byte, param2 [2]byte, data []byte, wake b
 			return
 		}
 
-		defer Sleep()
+		// defer Sleep()
+		defer Idle()
 	}
 
 	// ATECC cmd packet format:
@@ -211,12 +242,16 @@ func ExecuteCmd(opcode byte, param1 [1]byte, param2 [2]byte, data []byte, wake b
 	cmd = append(cmd, crc16(cmd)...)
 
 	err = armoryctl.I2CWrite(I2CBus, I2CAddress, CmdAddress, cmd)
+	log.Printf("[ATSEND Execute addr:%03d %d Bytes:[%X]]\n", I2CAddress, CmdAddress, cmd)
 
 	if err != nil {
 		return
 	}
 
 	time.Sleep(CmdMaxExecutionTime * time.Millisecond)
+
+	_ = armoryctl.I2CWrite(I2CBus, I2CAddress, 0x00, []byte{0x00})
+	log.Printf("[ATSEND wordadr addr:%03d %d]\n", I2CAddress, 0)
 
 	// The output FIFO is shared among status, error, and command results.
 	// The first read command is needed to read how many bytes are present
@@ -241,6 +276,50 @@ func ExecuteCmd(opcode byte, param1 [1]byte, param2 [2]byte, data []byte, wake b
 }
 
 // Execute self test command
+func SHA256(sfmt string, msg string) (res string, err error) {
+	// param1 0x47: performs SHA256 functions.
+
+	// sha256 init
+	data, err := ExecuteCmd(Cmd["SHA256"], [1]byte{ShaMode["SHA_MODE_SHA256_START"]}, [2]byte{0x00, 0x00}, nil, true)
+
+	if err != nil {
+	    return
+	}
+
+	// sha256 update
+	var msg_bytes []byte
+
+	if sfmt == "hex" && len(msg) > 0 {
+	    msg_bytes, err = hex.DecodeString(msg)
+	    if err != nil {
+	        return
+	    }
+	} else if sfmt == "str" {
+	    msg_bytes = []byte(msg)
+	}
+
+	block_cnt := len(msg_bytes)/64
+	for i := 0; i < block_cnt; i++ {
+	    data, err = ExecuteCmd(Cmd["SHA256"], [1]byte{ShaMode["SHA_MODE_SHA256_UPDATE"]}, 
+						    [2]byte{0x40,0}, msg_bytes[i*0x40:(i+1)*0x40], true)
+
+	    if err != nil {
+		return
+	    }
+	}
+
+	//sha256 final
+	data, err = ExecuteCmd(Cmd["SHA256"], [1]byte{ShaMode["SHA_MODE_SHA256_END"]},
+						[2]byte{byte(len(msg_bytes)-block_cnt*64)}, msg_bytes[block_cnt*64:], true)
+
+	if err != nil {
+		return
+	}
+	Sleep()
+	return fmt.Sprintf("SHA256 HexDigest: %x", data), nil
+}
+
+// Execute self test command
 func SelfTest() (res string, err error) {
 	// param1 0x3b: performs all available tests.
 	data, err := ExecuteCmd(Cmd["SelfTest"], [1]byte{0x3b}, [2]byte{0x00, 0x00}, nil, true)
@@ -256,7 +335,7 @@ func SelfTest() (res string, err error) {
 			res += k + ":PASS "
 		}
 	}
-
+	Sleep()
 	return
 }
 
@@ -277,6 +356,6 @@ func Info() (res string, err error) {
 	serial = append(serial, data[0:4]...)
 	serial = append(serial, data[8:13]...)
 	revision := data[4:8]
-
+	Sleep()
 	return fmt.Sprintf("serial:0x%x revision:0x%x", serial, revision), nil
 }
