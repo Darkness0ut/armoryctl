@@ -112,6 +112,7 @@ Bluetooth module (ANNA-B112)
 Secure Element (ATECC608A/ATECC608B)
   atecc info			# read device information
   atecc self_test		# execute self test procedure
+  atecc sha256 [(str|hex) msg]	# execute sha256 hash
 
 Power Management Integrated Circuit (PF1510)
   pmic info			# read device information
