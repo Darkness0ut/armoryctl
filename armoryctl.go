@@ -77,6 +77,7 @@ Bluetooth module (ANNA-B112)
 Secure Element (ATECC608A/ATECC608B)
   atecc info			# read device information
   atecc self_test		# execute self test procedure
+  atecc sha256 [(str|hex) msg]	# execute sha256 hash
 
 Power Management Integrated Circuit (PF1510)
   pmic info			# read device information
@@ -267,6 +268,12 @@ func main() {
 		res, err = atecc608.Info()
 	case "atecc self_test":
 		res, err = atecc608.SelfTest()
+	case "atecc sha256":
+		if len(flag.Args()) < 4 {
+			res, err = atecc608.SHA256("str", "")
+		} else  {
+			res, err = atecc608.SHA256(flag.Arg(2), flag.Arg(3))
+		}
 	case "pmic info":
 		res, err = pf1510.Info()
 	default:
