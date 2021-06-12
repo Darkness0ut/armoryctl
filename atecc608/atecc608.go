@@ -64,14 +64,14 @@ var ShaMode = map[string]byte{
 	"SHA_MODE_HMAC_UPDATE": 	1,
 	"SHA_MODE_HMAC_END": 		5,
 	"SHA_MODE_READ_CONTEXT": 	6,
-	"SHA_MODE_WRITE_CONTEXT":   7,
+	"SHA_MODE_WRITE_CONTEXT":   	7,
 	"SHA_MODE_TARGET_MASK": 	0xC0,
-    "SHA_MODE_TARGET_TEMPKEY":  0x00,
-    "SHA_MODE_TARGET_MSGDIGBUF":0x40,
-    "SHA_MODE_TARGET_OUT_ONLY": 0xC0,
-    // "SHA_RSP_SIZE": 			35,
-    // "SHA_RSP_SIZE_SHORT":      	4,
-    // "SHA_RSP_SIZE_LONG":      	35,
+    	"SHA_MODE_TARGET_TEMPKEY":  	0x00,
+    	"SHA_MODE_TARGET_MSGDIGBUF":	0x40,
+    	"SHA_MODE_TARGET_OUT_ONLY": 	0xC0,
+    	// "SHA_RSP_SIZE": 		35,
+    	// "SHA_RSP_SIZE_SHORT":      	4,
+	// "SHA_RSP_SIZE_LONG":      	35,
 }
 
 // Device status/error codes.
