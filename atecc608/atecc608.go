@@ -92,11 +92,12 @@ var Status = map[byte]string{
 // Supported tests and result bit mask.
 // (p100, Table 11-43, ATECC608A Full Datasheet)
 var Test = map[string]byte{
-	"RNG":   0x20,
-	"AES":   0x10,
-	"ECDH":  0x08,
-	"ECDSA": 0x02,
-	"DRBG":  0x01,
+	"SHA":   	0x20,
+	"AES":   	0x10,
+	"ECDH":  	0x08,
+	"ECDSA Sign": 	0x04,
+	"ECDSA Verify": 0x02,
+	"RNG DRBG":  	0x01,
 }
 
 func crc16(data []byte) []byte {
