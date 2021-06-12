@@ -323,7 +323,7 @@ func SHA256(sfmt string, msg string) (res string, err error) {
 // Execute self test command
 func SelfTest() (res string, err error) {
 	// param1 0x3b: performs all available tests.
-	data, err := ExecuteCmd(Cmd["SelfTest"], [1]byte{0x3b}, [2]byte{0x00, 0x00}, nil, true)
+	data, err := ExecuteCmd(Cmd["SelfTest"], [1]byte{0x3F}, [2]byte{0x00, 0x00}, nil, true)
 
 	if err != nil {
 		return
