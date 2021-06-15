@@ -76,6 +76,7 @@ Bluetooth module (ANNA-B112)
 
 Secure Element (ATECC608A/ATECC608B)
   atecc info			# read device information
+  atecc config			# read config zone
   atecc self_test		# execute self test procedure
   atecc sha256 [(str|hex) msg]	# execute sha256 hash
 
@@ -266,6 +267,8 @@ func main() {
 		err = anna_b112.SetDeviceName(flag.Arg(2))
 	case "atecc info":
 		res, err = atecc608.Info()
+	case "atecc config":
+		res, err = atecc608.Config()
 	case "atecc self_test":
 		res, err = atecc608.SelfTest()
 	case "atecc sha256":
