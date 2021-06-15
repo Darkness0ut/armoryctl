@@ -52,7 +52,7 @@ const ResponseMinLen = 4
 var Cmd = map[string]byte{
 	"Read":     0x02,
 	"SelfTest": 0x77,
-	"SHA256":	0x47,
+	"SHA256":   0x47,
 }
 
 var ShaMode = map[string]byte{
@@ -64,13 +64,13 @@ var ShaMode = map[string]byte{
 	"SHA_MODE_HMAC_UPDATE": 	1,
 	"SHA_MODE_HMAC_END": 		5,
 	"SHA_MODE_READ_CONTEXT": 	6,
-	"SHA_MODE_WRITE_CONTEXT":   	7,
+	"SHA_MODE_WRITE_CONTEXT": 	7,
 	"SHA_MODE_TARGET_MASK": 	0xC0,
-    	"SHA_MODE_TARGET_TEMPKEY":  	0x00,
-    	"SHA_MODE_TARGET_MSGDIGBUF":	0x40,
-    	"SHA_MODE_TARGET_OUT_ONLY": 	0xC0,
-    	// "SHA_RSP_SIZE": 		35,
-    	// "SHA_RSP_SIZE_SHORT":      	4,
+	"SHA_MODE_TARGET_TEMPKEY":  	0x00,
+	"SHA_MODE_TARGET_MSGDIGBUF":	0x40,
+	"SHA_MODE_TARGET_OUT_ONLY": 	0xC0,
+	// "SHA_RSP_SIZE": 		35,
+	// "SHA_RSP_SIZE_SHORT":      	4,
 	// "SHA_RSP_SIZE_LONG":      	35,
 }
 
@@ -95,9 +95,9 @@ var Test = map[string]byte{
 	"SHA":   	0x20,
 	"AES":   	0x10,
 	"ECDH":  	0x08,
-	"ECDSA Sign": 	0x04,
+	"ECDSA Sign" :	0x04,
 	"ECDSA Verify": 0x02,
-	"RNG DRBG":  	0x01,
+	"RND DRBG":  	0x01,
 }
 
 func crc16(data []byte) []byte {
@@ -359,4 +359,30 @@ func Info() (res string, err error) {
 	revision := data[4:8]
 	Sleep()
 	return fmt.Sprintf("serial:0x%x revision:0x%x", serial, revision), nil
+}
+
+// Read device config zone data
+func Config() (res string, err error) {
+	data := []byte{}
+	config := "config:\n      "
+	for n:=0; n<16; n++ {
+		config += fmt.Sprintf(" %2X", n)
+	}
+
+	for i := 0; i<4; i++ {
+		data, err = ExecuteCmd(Cmd["Read"], [1]byte{0x80}, [2]byte{byte(i<<3)}, nil, true)
+		if err != nil {
+			return
+		}
+		for n:=0; n<16; n++ {
+			if n == 0 || n == 8 {
+				config += fmt.Sprintf("\n%04X:  ", i*32+n*2)
+			}
+			config += fmt.Sprintf("%02X %02X ", data[n*2],data[n*2+1])
+		}
+
+	}
+
+	Sleep()
+	return config, nil
 }
